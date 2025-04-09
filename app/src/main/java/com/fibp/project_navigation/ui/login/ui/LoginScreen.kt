@@ -1,9 +1,9 @@
 package com.fibp.project_navigation.ui.login.ui
 
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,15 +20,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,73 +40,103 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(viewModel: LoginViewModel) {
     Box(modifier = Modifier
         .fillMaxSize()
         .background(color = Color(0xFFFF3366))
     ) {
-        Login(Modifier.align(Alignment.Center))
+        Login(Modifier.align(Alignment.Center), viewModel)
     }
 }
 
 @Composable
-fun Login(modifier: Modifier) {
+fun Login(modifier: Modifier, viewModel: LoginViewModel) {
     Column(modifier = modifier) {
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(56.dp))
         HeaderImage(Modifier.align(Alignment.CenterHorizontally))
         Spacer(modifier = Modifier.height(48.dp))
-        BoxInterface()
+        BoxInterface(viewModel)
     }
 }
 
 @Composable
-fun BoxInterface() {
-    val context = LocalContext.current
-    var password by remember { mutableStateOf("") }
-    var user by remember { mutableStateOf("") }
+fun BoxInterface(viewModel: LoginViewModel) {
+//    var password by remember { mutableStateOf("") }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(
-                RoundedCornerShape(
-                    topStart = 80.dp,
-                    topEnd = 0.dp
-                )
-            ) // Arredonda apenas o topo
-            .background(Color.White)
-            .padding(30.dp)
-    ) {
-        Column {
-            WelcomeLabel()
-            Spacer(modifier = Modifier.padding(8.dp))
-            UserLabel()
-            UserField(user) { user = it }
-            Spacer(modifier = Modifier.padding(16.dp))
-            PasswordLabel()
-            PasswordField(password) { password = it }
-            Spacer(modifier = Modifier
-                .padding(16.dp)
-                .height(32.dp))
-            ButtonLogin(user, password, context)
+    val username: String by viewModel.username.observeAsState(initial = "")
+    val password: String by viewModel.password.observeAsState(initial = "")
+    val loginEnable: Boolean by viewModel.loginEnable.observeAsState(initial = false)
+    val isLoading: Boolean by viewModel.isLoading.observeAsState(initial = false)
+    val coroutineScope = rememberCoroutineScope()
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 80.dp,
+                        topEnd = 0.dp
+                    )
+                ) // Arredonda apenas o topo
+                .background(Color.White)
+                .padding(30.dp)
+        ) {
+            Column {
+                WelcomeLabel()
+                Spacer(modifier = Modifier.padding(8.dp))
+                UsernameLabel()
+                UserField(username) { viewModel.onLoginChanged(it, password) }
+                Spacer(modifier = Modifier.padding(16.dp))
+                PasswordLabel()
+                PasswordField(password) { viewModel.onLoginChanged(username, it) }
+                Spacer(modifier = Modifier.padding(8.dp))
+                ForgotPasswordLabel(modifier = Modifier.align(Alignment.CenterHorizontally))
+                Spacer(modifier = Modifier
+                    .padding(16.dp)
+                    .height(32.dp))
+                LoginButton(loginEnable) {
+                    coroutineScope.launch {
+                        viewModel.onLoginSelected()
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ButtonLogin(user: String, password: String, context: Context) {
+fun ForgotPasswordLabel(modifier: Modifier) {
+    Text(
+        text = "Esqueceu a sua senha?",
+        modifier = modifier.clickable {  },
+        color = Color.Gray,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
+fun LoginButton(loginEnable: Boolean, onLoginSelected: () -> Unit) {
+    val context = LocalContext.current
     Button(
-        onClick = {
-            if (user.isEmpty() || password.isEmpty()) {
-                Toast.makeText(context, "Preencha todos os dados", Toast.LENGTH_SHORT).show()
-            }
-        },
+        onClick = { onLoginSelected() },
         modifier = Modifier
             .height(70.dp)
             .fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3366))
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFF3366),
+            disabledContentColor = Color(0x80FF3366),
+            disabledContainerColor = Color(0x80FF3366),
+            contentColor = Color.Black
+        ), enabled = loginEnable
     ) {
         Text(
             text = "LOGIN",
@@ -130,7 +160,7 @@ fun PasswordField(password: String, onPasswordChange: (String) -> Unit) {
             .height(50.dp),
         shape = RoundedCornerShape(25.dp),
         colors = TextFieldDefaults.outlinedTextFieldColors(
-            containerColor = Color.LightGray, // Fundo transparente
+            containerColor = Color(0xFFDEDDDD), // Fundo transparente
             unfocusedBorderColor = Color.Transparent,  // Cor da borda quando não focado
             focusedBorderColor = Color(0xFFFF3366), // Cor da borda quando focado
             textColor = Color.Black, // Cor do texto
@@ -139,7 +169,7 @@ fun PasswordField(password: String, onPasswordChange: (String) -> Unit) {
         textStyle = TextStyle(
             textAlign = TextAlign.Start
         ),
-        placeholder = { Text(text = "Digite a sua senha")},
+        placeholder = { Text(text = "Digite a sua Senha")},
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
     )
 }
@@ -153,7 +183,7 @@ fun PasswordLabel() {
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .fillMaxWidth(0.9f)
-            .padding(5.dp, 0.dp, 0.dp, 0.dp)
+            .padding(20.dp, 0.dp, 0.dp, 0.dp)
     )
 }
 
@@ -170,7 +200,7 @@ fun UserField(user: String, onUserChange: (String) -> Unit) {
             .height(50.dp),
         shape = RoundedCornerShape(25.dp),
         colors = TextFieldDefaults.outlinedTextFieldColors(
-            containerColor = Color.LightGray, // Fundo transparente
+            containerColor = Color(0xFFDEDDDD), // Fundo transparente
             unfocusedBorderColor = Color.Transparent,  // Cor da borda quando não focado
             focusedBorderColor = Color(0xFFFF3366), // Cor da borda quando focado
             textColor = Color.Black, // Cor do texto
@@ -185,15 +215,15 @@ fun UserField(user: String, onUserChange: (String) -> Unit) {
 }
 
 @Composable
-fun UserLabel() {
+fun UsernameLabel() {
     Text(
-        text = "User",
+        text = "Username",
         color = Color(0xFFFF3366),
         fontSize = 22.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .fillMaxWidth(0.9f)
-            .padding(5.dp, 0.dp, 0.dp, 0.dp)
+            .padding(20.dp, 0.dp, 0.dp, 0.dp)
     )
 }
 
