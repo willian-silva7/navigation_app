@@ -28,7 +28,11 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +41,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -150,6 +156,9 @@ fun LoginButton(loginEnable: Boolean, onLoginSelected: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PasswordField(password: String, onPasswordChange: (String) -> Unit) {
+    var hiddenPassword by remember {
+        mutableStateOf(true)
+    }
 
     OutlinedTextField(
         value = password,
@@ -169,6 +178,12 @@ fun PasswordField(password: String, onPasswordChange: (String) -> Unit) {
         textStyle = TextStyle(
             textAlign = TextAlign.Start
         ),
+        label = { Text(text = "Password")},
+        visualTransformation = if (hiddenPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        trailingIcon = {
+                       Text(text = if (hiddenPassword) "Mostrar" else "Ocultar",
+                           modifier = Modifier.clickable { hiddenPassword = !hiddenPassword })
+        },
         placeholder = { Text(text = "Digite a sua Senha")},
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
     )
@@ -209,6 +224,7 @@ fun UserField(user: String, onUserChange: (String) -> Unit) {
         textStyle = TextStyle(
             textAlign = TextAlign.Start
         ),
+        label = { Text(text = "Username")},
         placeholder = { Text(text = "Digite o seu Username")},
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
     )
